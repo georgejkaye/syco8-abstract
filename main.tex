@@ -24,7 +24,7 @@
 \usepackage[style=numeric]{biblatex}
 \usepackage[colorlinks=true, pdfauthor={George Kaye}]{hyperref}
 
-\addbibresource{refs/refs.bib}
+\addbibresource[glob]{refs/refs.bib}
 
 \setcounter{biburlnumpenalty}{7000}
 \setcounter{biburllcpenalty}{7000}
@@ -144,7 +144,7 @@ We model delay as a structural morphism $\morph{\delay_n}{1}{1}$, parameterised 
 We draw it as a white circle in our string diagrams.
 Adding feedback is easy: we simply add a trace to the category.
 
-\begin{definition}[Seqential circuits]
+\begin{definition}[Sequential circuits]
     Let $\scirc[V]$ be the category obtained by freely extending $\ccirc[V]$ with a trace operator and a new generator $\morph{\delay_n}{1}{1}$ subject to the equations in Figure~\ref{fig:sequential}.
 \end{definition}
 

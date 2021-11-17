@@ -16,12 +16,12 @@ jobs:
       - name: Package the latex file
         uses: xu-cheng/texlive-action/full@v1
         with:
-          run: ./latex-scripts/src/package.sh ${{ github.event.repository.name }} . ./latex-scripts
+          run: ./latex-scripts/src/package.sh ${{ github.event.repository.name }} . ./latex-scripts biber
       - name: Zip up the package
         uses: montudor/action-zip@v1
         with:
           args: zip -qq -r ${{ github.event.repository.name }}.zip ${{ github.event.repository.name }}
-      - name: Upload PDF as an artiface
+      - name: Upload PDF as an artifact
         uses: actions/upload-artifact@v2
         with:
           name: ${{ github.event.repository.name }}.pdf

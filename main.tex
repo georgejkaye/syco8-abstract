@@ -1,0 +1,385 @@
+\documentclass[11pt,numbib]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[margin=0.75in]{ geometry }
+\usepackage{kpfonts}
+
+\usepackage{ amsmath }
+\usepackage{ amssymb }
+\usepackage{ amsthm }
+\usepackage{ thmtools }
+\usepackage{ stmaryrd }
+\usepackage{ mathtools }
+\usepackage{ etoolbox }
+\usepackage{ enumitem } 
+
+\usepackage{ tikz }
+\usepackage{ tikz-cd }
+\usepackage{ figures/tikzit }
+\usepackage{ standalone }
+\usepackage{ wrapfig }
+
+\usepackage{ pdfpages }
+
+\usepackage[style=numeric]{biblatex}
+\usepackage[colorlinks=true, pdfauthor={George Kaye}]{hyperref}
+
+\addbibresource{refs/refs.bib}
+
+\setcounter{biburlnumpenalty}{7000}
+\setcounter{biburllcpenalty}{7000}
+\setcounter{biburlucpenalty}{8000}
+
+\input{figures/circuits.tikzstyles}
+
+\input{macros/sets}
+\input{macros/category}
+\input{macros/letters}
+\input{macros/streams}
+\input{macros/circuits}
+
+\declaretheorem[title=Theorem]{theorem}
+\declaretheorem[title=Definition, sibling=theorem]{definition}
+\declaretheorem[title=Lemma, sibling=theorem]{lemma}
+\declaretheorem[title=Example, sibling=theorem]{example}
+\declaretheorem[title=Remark, sibling=theorem]{remark}
+\declaretheorem[title=Proposition, sibling=theorem]{proposition}
+\declaretheorem[title=Corollary, sibling=theorem]{corollary}
+
+\title{\vspace{-2em}\huge Normalisation by evaluation for digital circuits\\\Large\textbf{Extended abstract}}
+\author{\textbf{George Kaye}, Dan R. Ghica and David Sprunger}
+
+\begin{document}
+    
+\maketitle
+
+\paragraph*{Motivation.}
+
+Digital circuits are ubiquitous in today's society, so it is essential that we have easy ways to  verify their correctness and reason with them.
+Conventionally, this is done by translation into an executable model such as an automaton, which can be simulated to observe its behaviour.
+Conversely, reasoning in software is often performed \textit{syntactically}, where programs are formulated equationally and can be reduced step by step by identifying \textit{redexes} in terms. 
+These redexes are replaced with simpler terms in order to reach some normal form.
+This is known as \textit{operational semantics} \cite{plotkin2004semantics}.
+
+In~\cite{ghica2016categorical}, an operational semantics for digital circuits was presented, in which circuits with delay and feedback are modelled as morphisms in a free traced cartesian (dataflow) category~\parencite{cazanescu1990algebraic,cazanescu1994feedback}.
+One benefit of this operational framework is that it allows reasoning about circuits with \emph{combinational feedback}~\parencite[Example 1]{ghica2016categorical}, in which a circuit has a non-delay-guarded feedback loop but the resulting circuit is actually combinational.
+In many circuit design tools, feedback must always be guarded by a delay and these circuits cannot be modelled.
+
+However, this does raise a problem when we have circuits with instant feedback that is \emph{not} combinational.
+In the original semantics, such circuits would never produce a value, but can only be unfolded infinitely.
+In this extended abstract, we look at the `missing link` from our categorical framework that allows us to deal with this problem.
+Moreover, we show how adding it to our semantics gives us soundness and completeness for \emph{periodic streams}, the denotational semantics for closed circuits.
+This verifies our intuition regarding the correctness of our categorical framework, and also presents a strategy of \emph{normalisation by evaluation} for our digital circuits.
+
+
+\paragraph*{Combinational circuits.}
+
+As in~\cite{ghica2016categorical}, we model digital circuits as freely generated morphisms in a traced cartesian (dataflow) prop: a category with objects the natural numbers and tensor product as addition.
+
+\begin{definition}
+    For a finite lattice $\textbf{V}$, let $\circsig[\textbf{V}]$ be a categorical signature with objects the natural numbers and a finite set of morphisms from three classes: \textbf{values} $\morph{v}{0}{1}$ for each $v \in \textbf{V}$; \textbf{gates} $\morph{g}{m}{1}$; and \textbf{structures} for forking $\morph{\fork}{1}{2}$, joining $\morph{\join}{2}{1}$ and stubbing $\morph{\stub}{1}{0}$ wires.
+\end{definition}
+
+\noindent
+Traditionally, we use a four-value lattice $\textbf{V}$ containing $\mft$ for high and $\mff$ for low in addition to $\bot$ and $\top$, such that $\mft \ljoin \mff = \top$ and $\mft \lmeet \mff = \bot$.
+We can define forks, joins and stubs for buses of arbitrary widths by combining them with identities and symmetries: we denote these as $\ccopy{}$, $\cmerge{}$ and $\cdel{}$ respectively.
+We write $\textbf{v}$ for a tensor of values $v_0,v_1,\cdots,v_{n-1}$.
+In our string diagrams, we draw $\fork$, $\join$ and $\stub$, as well as their arbitrary width versions, as black dots $\bullet$.
+The actual morphism should be clear from context.
+
+\begin{definition}[Combinational circuits]
+    Let $\ccirc[V]$ be the free symmetric monoidal category over $\circsig[V]$ and monoidal signature $(\nat,+,0)$ subject to the equations in Figure~\ref{fig:combinational}, quotiented such that circuits with the same input-output behaviour are equal.
+\end{definition}
+
+\begin{figure}
+    \centering
+    \scalebox{0.75}{\tikzfig{circuits/axioms/fork-lhs}}
+    \,=\,
+    \scalebox{0.75}{\tikzfig{circuits/axioms/fork-rhs}}
+    \quad\quad
+    \scalebox{0.75}{\tikzfig{circuits/axioms/join-lhs}}
+    \,=\,
+    \scalebox{0.75}{\tikzfig{circuits/axioms/join-rhs}}
+    \quad\quad
+    \scalebox{0.75}{\tikzfig{circuits/axioms/stub-lhs}}
+    \,=\,
+    \scalebox{0.75}{\tikzfig{circuits/axioms/stub-rhs}}
+    \quad\quad
+    \begin{minipage}{10em}
+        \vspace{1.5em}
+
+        \begin{center}
+            \scalebox{0.75}{\tikzfig{circuits/axioms/gate-lhs}}
+            \,=\,
+            \scalebox{0.75}{\tikzfig{circuits/axioms/gate-rhs}}
+
+            \vspace{0.5em}
+
+            \footnotesize where $g$ is monotonic
+        \end{center}
+    \end{minipage}
+    \caption{The axioms of combinational circuits, where $v$ and $w$ are values.}
+    \label{fig:combinational}
+\end{figure}
+
+\noindent
+The first three equations cover copying a value, joining two values by coalescing them, and stubbing a wire.
+The last equation states that gates are \emph{extensional}: their outputs are solely determined by their inputs.
+Using these equations we can derive an important lemma:
+
+\begin{lemma}[Extensionality]
+    For a circuit $\morph{f}{0}{n} \in \ccirc[V]$, there exists a tensor $\textbf{v}$ such that $f = \textbf{v}$.
+\end{lemma}
+
+\noindent
+Quotienting by input-output behaviour provides some interesting structure to our category.
+For example, $\ccopy{}$ and $\cdel{}$ are the copy and discard maps of a cartesian category.
+Moreover $(\join,\bot,\fork,\stub)$ forms a \emph{bialgebra}.
+
+\paragraph*{Sequential circuits.}
+
+Combinational circuits are not very interesting.
+We now turn our attention to \emph{sequential circuits} with delay and feedback.
+We model delay as a structural morphism $\morph{\delay_n}{1}{1}$, parameterised by $n \in \nat$: the duration of the delay.
+We draw it as a white circle in our string diagrams.
+Adding feedback is easy: we simply add a trace to the category.
+
+\begin{definition}[Seqential circuits]
+    Let $\scirc[V]$ be the category obtained by freely extending $\ccirc[V]$ with a trace operator and a new generator $\morph{\delay_n}{1}{1}$ subject to the equations in Figure~\ref{fig:sequential}.
+\end{definition}
+
+\begin{figure}
+    \centering
+    \scalebox{0.7}{\tikzfig{circuits/axioms/timelessness-lhs}}
+    \,=\,
+    \scalebox{0.7}{\tikzfig{circuits/axioms/timelessness-rhs}}
+    \quad
+    \scalebox{0.7}{\tikzfig{circuits/axioms/disconnect-lhs}}
+    \,=\,
+    \scalebox{0.7}{\tikzfig{circuits/axioms/disconnect-rhs}}
+    \quad
+    \scalebox{0.7}{\tikzfig{circuits/axioms/unobservable-lhs}}
+    \,=\,
+    \scalebox{0.7}{\tikzfig{circuits/axioms/unobservable-rhs}}
+    \quad
+    \scalebox{0.7}{\tikzfig{circuits/axioms/streaming-lhs}}
+    \,=\,
+    \scalebox{0.7}{\tikzfig{circuits/axioms/streaming-rhs}}
+    \caption{The axioms of sequential circuits, where $g$ is a gate.}
+    \label{fig:sequential}
+\end{figure}
+
+\noindent
+The first three delay axioms should be easy to interpret.
+The fourth (\emph{Streaming}) is more subtle: it means that to process a \emph{waveform} with an instantaneous value at its `head' and some other delayed component, we copy the gate.
+One copy is for whatever is happening `now', and the other is for what is happening `later'.
+We can then join the outputs of the two copies.
+
+$\scirc[V]$ is obviously a traced monoidal category.
+However, we can go one better:
+
+\begin{theorem}[\parencite{ghica2016categorical}]
+    $\scirc[V]$ is a traced cartesian category with $\ccopy{}$ and $\cdel{}$ as the diagonal and unit.
+\end{theorem}
+
+\noindent
+Traced cartesian categories~ (also known as \emph{dataflow categories}~\cite[Section~6.4]{selinger2010survey}) arise naturally in computer science through \emph{fixpoints}~\parencite{cazanescu1990algebraic,cazanescu1994feedback}.
+In fact, a category is only traced cartesian if it admits a \emph{conway operator}~\parencite{hasegawa1997recursion}.
+This allows us to use the \emph{unfolding} rule, which can be derived using the diagonal and the trace.
+
+\begin{center}
+    \scalebox{0.75}{\tikzfig{strings/dataflow/unfolding-lhs}}
+    \quad$=$\quad
+    \scalebox{0.75}{\tikzfig{strings/dataflow/unfolding-rhs}}
+\end{center}
+
+\noindent
+This powerful rule is a key part of the diagrammatic semantics for digital circuits detailed in~\parencite{ghica2017diagrammatictech}.
+
+\paragraph*{Instant feedback.}
+
+As we have established in the motivation, using this categorical framework allows us to reason with circuits with \emph{combinational feedback}, in which there \emph{is} an instant feedback loop, but the circuit is actually combinational.
+However, problems can arise when considering circuits with instant feedback that is \emph{not} combinational.
+This phenomenon is illustrated in the following example.
+
+\begin{example}\label{ex:instant-feedback}
+    Consider the circuit $\mft \seq \trace{1}{\land \seq \fork}$.
+    By the axioms of circuits specified in~\cite{ghica2016categorical}, the only thing we can do to this circuit is unfold it, which results in 
+    
+    \begin{center}
+        \scalebox{0.75}{\tikzfig{circuits/productivity/trand}}
+        \quad$=$\quad
+        \scalebox{0.75}{\tikzfig{circuits/productivity/trand-unfold}}
+    \end{center}
+
+    \noindent
+    We could keep unfolding but this would just result in the circuit getting larger.
+    There is never any opportunity for other rewrites, so we are stuck.
+\end{example}
+
+\noindent
+How can we solve this problem?
+We cannot simply enforce that all feedback is delay-guarded, as this would mean we could not model the circuits with combinational feedback.
+
+Fortunately, there is a solution.
+Due to the Kleene fixed-point theorem~\cite[p.24]{stoltenberg1994mathematical}, the fact that our values form a finite lattice and that all the gates in our setting are monotone, the circuit will always stabilise under a finite number of iterations.
+This number is at most one more than the length of the longest chain of the lattice.
+
+Therefore if we have some subcircuit $f$ with an instant feedback loop, we can actually model this by iterating $f$ a finite number of times, using $\bot$ as the initial value of the feedback loop.
+Figure~\ref{fig:instant-feedback} illustrates this in the case of Example~\ref{ex:instant-feedback} for our usual lattice $\textbf{V}$, in which the length of the longest chain is $2$.
+
+\begin{figure}[t]
+    \centering
+    \scalebox{0.85}{\tikzfig{circuits/productivity/trand}}
+    \quad$=$\quad
+    \scalebox{0.85}{\tikzfig{circuits/productivity/trand-instfb}}
+    \quad$=$\quad
+    \scalebox{0.85}{\tikzfig{circuits/productivity/trand-instfb-reduced-3}}
+    \caption{Applying the instant feedback axiom.}
+    \label{fig:instant-feedback}
+\end{figure}
+
+Armed with this axiom, we can refine the original productivity result~\parencite[Theorem 24]{ghica2017diagrammatic}.
+Rather than restricting ourselves to delay-guarded circuits, we can use it for \emph{any} closed circuit.
+
+\begin{theorem}[Productivity]\label{thm:productivity}
+    For a closed circuit $\morph{f}{0}{n}$, there exists a tensor of values $\textbf{w}$ and morphism $\morph{g}{0}{n}$ such that $f = \textbf{w} \tensor g \seq \cmerge{n}$.
+\end{theorem}
+
+\noindent
+This is due to instant feedback, unfolding, and streaming, and is illustrated in Figure~\ref{fig:productivity}.
+
+\begin{figure}[t]
+    \centering
+    \scalebox{0.75}{\tikzfig{circuits/productivity/step-1}}
+    \quad$=$\quad
+    \scalebox{0.75}{\tikzfig{circuits/productivity/step-5}}
+    \caption{We can always produce an instantaneous value from a circuit thanks to Theorem~\ref{thm:productivity}.}
+    \label{fig:productivity}
+\end{figure}
+
+\paragraph*{Streams.}
+
+Using productivity, we are able to reduce a closed circuit to an instantaneous tensor of values and some delayed subcircuit.
+We call this a \emph{waveform}, and write $\wavef{f}[i]$ for the tensor of values obtained by applying productivity $i$ times.
+This gives us a \emph{stream} of values $\wavef{f}[0],\wavef{f}[1],\wavef{f}[2], \cdots$.
+
+Streams were already examined as a concrete semantics for our category of digital circuits in~\parencite[Section 2.4]{ghica2017diagrammatictech}.
+However, this was only used as a method to verify the intuition behind the axioms.
+We want to go one step further, and characterise an \emph{isomorphism} between circuits and streams.
+For now, we concentrate on closed circuits and \emph{periodic} streams.
+
+\begin{definition}[Periodic stream]
+    A periodic stream is a stream that has a finite prefix followed by an infinitely repeating finite segment, i.e. a stream of the form $(v_0,v_1,\cdots,v_{p-1},w_{0},w_{1}, \cdots,w_{r-1},w_{0},w_{1},\cdots,w_{r-1},w_{0},w_{1},\cdots$.
+\end{definition}
+
+\noindent
+This follows intuition: our circuits contain only a finite number of delay elements (registers) and the value lattice we operate in is also finite, so at some point the internal state must repeat.
+For a stream $\sigma$, we write $\sigma[i]$ for the $i$th element, i.e. the head of the $i$th stream derivative.
+
+To interpret circuits as streams, we must first examine a concrete implementation of our circuits as \emph{Mealy machines}.
+We can then make the jump to streams, as we shall see later.
+
+\begin{definition}[Mealy machines~\cite{bonsangue2008coalgebraic}]
+    For lattices $\textbf{M},\textbf{R},\textbf{N}$, a Mealy machine with interface $(\textbf{M},\textbf{N})$ is a tuple $(\textbf{X},\langle \autoo, \autot \rangle)$ where $\morph{\autoo}{\textbf{R}}{\textbf{N}^\textbf{M}}$ and $\morph{\autot}{\textbf{R}}{\textbf{R}^\textbf{M}}$ are Scott-continuous functions representing \emph{outputs} and \emph{transitions} respectively.
+    For a Mealy machine $A$, we can \emph{initialise} it with a given start state $s_0 \in \textbf{R}$.
+    We call the tuple $(A,s_0)$ an \emph{initialised Mealy machine}.
+\end{definition}
+
+\noindent
+Mealy machines can be interpreted as coalgebra of the functor $\morph{F}{\textbf{R}}{(\textbf{N} \times \textbf{R})^\textbf{M}}$ in \textbf{Lat}, the category of lattices.
+This means that there is a standard notion of homomorphism~\parencite{bonsangue2008coalgebraic} and, importantly, the notion of a \emph{final Mealy machine}.
+The state space of this Mealy machine is the set of streams of $\textbf{N}$, and its output and transition functions are the initial value and stream derivative respectively.
+
+This means that there is a unique function that transforms a Mealy machine into its corresponding stream.
+Moreover, any two Mealy machines with the same corresponding stream must therefore be \emph{bisimilar}: observationally equivalent. 
+Obtaining a stream in this way from a Mealy machine provides us with the following crucial result:
+
+\begin{proposition}
+    A closed Mealy machine generates a periodic stream if $\textbf{R}$ is finite.
+\end{proposition}
+
+\paragraph*{Interpretation.}
+
+In our context we are only concerned with Mealy machines where $\textbf{M}$, $\textbf{R}$ and $\textbf{N}$ are all sets of tuples over the same lattice $\textbf{V}$.
+We write a machine with inputs $\textbf{V}^m$, states $\textbf{V}^r$ and outputs $\textbf{V}^n$ as $m \xrightarrow{r} n$.
+Notably, as $\textbf{V}$ is finite, so is $\textbf{V}^r$.
+
+To establish a link between our circuits and streams, we must interpret them as Mealy machines.
+Therefore we must define the operations of composition, tensor and trace.
+Composition and tensor are fairly obvious; for trace, we use a fixpoint operator to `simulate' the circuit over a finite number of iterations, similarly to how we defined the instant feedback axiom.
+
+\begin{definition}
+    Let $\mealy{V}$ be the prop with morphisms $m \to n$ the initialised Mealy machines over $\textbf{V}$.
+    Let $\sprop[V]$ be the prop with morphisms $m \to n$ the streams of functions $\textbf{V}^m \to \textbf{V}^n$ and let $\csprop[V]$ be the subcategory containing only the morphisms $0 \to n$, i.e. streams of $\textbf{V}^n$.
+    Finally, let $\pcsprop[V]$ be the subcategory of $\csprop[V]$ containing only the periodic streams.
+\end{definition}
+
+\begin{proposition}
+    $\mealy{V}$ is a traced cartesian category.
+\end{proposition}
+
+\begin{definition}
+    Let $\morph{\tomm}{\scirc[V]}{\mealy{V}}$ be the identity-on-objects traced monoidal functor that translates circuits into the corresponding machine in $\mealy{V}$.
+    Then let $\morph{\tors}{\mealy{V}}{\sprop[V]}$ be the identity-on-objects traced monoidal functor that produces the unique stream corresponding to a Mealy machine.
+\end{definition}
+
+\noindent
+The transition is defined inductively over the structure of the term: while we omit the details, we will sketch it.
+The set of states are the possible contents of the value and delay generators.
+For example, any value generator will initially contain a value, but will permanently transition to $\bot$ after `releasing' it; conversely, any delay will initially contain $\bot$, but may store a value in subsequent ticks.
+Gates and structural morphisms are stateless machines that simply output the function corresponding to its behaviour.
+Composition, tensor and trace use the operations from $\mealy{V}$.
+Since all the axioms of $\scirc[V]$ hold in $\mealy{V}$, we can conclude the following:
+
+\begin{theorem}
+    For any $f,g \in \scirc[V]$, if $f = g$ then $\tors[\tomm[f]] = \tors[\tomm[g]]$.
+\end{theorem}
+
+\paragraph*{Isomorphism.}
+
+We can translate from circuits to streams: can we go in the opposite direction?
+For the case of periodic streams of values, this is quite simple.
+
+\begin{definition}
+    Let $\morph{\rstot}{\pcsprop[V]}{\scirc[V]}$ be an identity-on-objects traced monoidal functor, defined for a periodic stream $(v_0,v_1,\cdots,v_{p-1},w_0,w_1,\cdots,w_{r-1},w_0,w_1,\cdots$ as illustrated in Figure~\ref{fig:streamcirc}.
+\end{definition}
+
+\begin{figure}
+    \centering
+    \scalebox{0.7}{\tikzfig{streams/streamcirc}}
+    \caption{The circuit morphism obtained from a periodic stream.}
+    \label{fig:streamcirc}
+\end{figure}
+
+\noindent
+This is a waveform!
+As we mentioned earlier, we can transform any circuit into a waveform, albeit with an arbitrary circuit $g$ as its tail rather than the complete set of explicit values we computed in the stream.
+We simply need to assert that the values at each tick are the same.
+
+\begin{proposition}[Stream-waveform correspondence]
+    For a circuit $\morph{f}{0}{n}$, $\wavef{f}[i] = \tors[\tomm[f]][i]$.
+\end{proposition}
+
+\noindent
+With this key principle we can conclude our final result.
+
+\begin{theorem}
+    $\cscirc[V] \cong \pcsprop[V]$.
+\end{theorem}
+
+\noindent
+The circuit we obtain from the stream interpretation may be in a much simpler form than the original morphism.
+We can therefore see that translating a closed circuit into a stream and back again is a form of \emph{evaluation by normalisation}.
+This offers an alternative to the reduction-based framework, which may be more efficient in some cases.
+
+\paragraph*{Future work.}
+
+We have shown that there is indeed a link between closed circuits and periodic streams, and that we can translate between them freely without losing information.
+One may wonder how the link between circuits and streams is affected if we use circuits that are \emph{not} closed.
+In this case, the denotational semantics are \emph{stream functions} that take a stream of inputs and return a stream of outputs, rather than just streams of values.
+Searching for similar results for non-closed circuits remains as future work.
+
+\printbibliography[heading=bibintoc,title={References}]
+
+\end{document}

@@ -4,14 +4,14 @@ Extended abstract for my talk at SYCO 8, 'Normalisation by evaluation for digita
 
 ## Setting up
 
-This project uses *submodules* since I share lots of figures between projects.
-After pulling the project, use this to grab the latest content:
+This project uses *submodules* to share diagrams and things between repos.
+To make sure you have them all pulled, do this to initialise them:
 
 ```sh
 git submodule update --init
 ```
 
-You may also want to run this whenever you pull.
+Occasionally you might want to do this to update the submodules:
 
 ```sh
 git submodule foreach git pull origin main 
